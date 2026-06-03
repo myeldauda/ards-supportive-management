@@ -209,13 +209,9 @@ app.layout = html.Div(
             },
         ),
 
-       dcc.Graph(
-    id="pressure-waveform"
-),
-
-dcc.Graph(
-    id="flow-waveform"
-),
+        dcc.Graph(
+            id="pressure-waveform"
+        ),
 
         dcc.Interval(
             id="interval-component",
@@ -244,8 +240,7 @@ dcc.Graph(
 
         Output("alerts-panel", "children"),
 
-Output("pressure-waveform", "figure"),
-Output("flow-waveform", "figure"),
+        Output("pressure-waveform", "figure"),
     ],
     [
         Input("interval-component", "n_intervals"),
@@ -377,8 +372,9 @@ def update_dashboard(n, profile, fio2, peep):
         *alerts,
     ]
 
-        # ==========================================
-    # PRESSURE WAVEFORM
+    # ==========================================
+    # OBJECTIVE 4A
+    # PRESSURE CONTROL WAVEFORM
     # ==========================================
 
     time = np.linspace(0, 12, 600)
@@ -398,7 +394,7 @@ def update_dashboard(n, profile, fio2, peep):
         + ventilator.inspiratory_pressure
     )
 
-    pressure_waveform = []
+    waveform = []
 
     for t in time:
 
@@ -408,95 +404,58 @@ def update_dashboard(n, profile, fio2, peep):
 
         if cycle_time <= inspiration_time:
 
-            pressure_waveform.append(
+            waveform.append(
                 pip_level
             )
 
         else:
 
-            pressure_waveform.append(
+            waveform.append(
                 peep_level
             )
 
-    pressure_figure = go.Figure()
+    figure = go.Figure()
 
-    pressure_figure.add_trace(
+    figure.add_trace(
         go.Scatter(
             x=time,
-            y=pressure_waveform,
+            y=waveform,
             mode="lines",
             line=dict(width=3),
-            name="Pressure",
+            name="Airway Pressure",
         )
     )
 
-    pressure_figure.update_layout(
+    figure.update_layout(
         template="plotly_dark",
         title="Pressure-Controlled Ventilator Waveform",
         xaxis_title="Time (s)",
         yaxis_title="Pressure (cmH₂O)",
-        height=400,
+        height=450,
+        yaxis=dict(
+            range=[
+                peep_level - 2,
+                pip_level + 5,
+            ]
+        ),
     )
 
-    # ==========================================
-    # FLOW WAVEFORM
-    # ==========================================
-
-    flow_waveform = []
-
-    for t in time:
-
-        cycle_time = (
-            t % cycle_duration
-        )
-
-        if cycle_time <= inspiration_time:
-
-            flow_waveform.append(
-                0.8
-            )
-
-        else:
-
-            flow_waveform.append(
-                -0.5
-            )
-
-    flow_figure = go.Figure()
-
-    flow_figure.add_trace(
-        go.Scatter(
-            x=time,
-            y=flow_waveform,
-            mode="lines",
-            line=dict(width=3),
-            name="Flow",
-        )
-    )
-
-    flow_figure.update_layout(
-        template="plotly_dark",
-        title="Flow-Time Waveform",
-        xaxis_title="Time (s)",
-        yaxis_title="Flow (L/s)",
-        height=400,
-    )
     return (
-    spo2,
-    pao2,
-    paco2,
-    pressure,
+        spo2,
+        pao2,
+        paco2,
+        pressure,
 
-    pf_ratio_text,
-    compliance_text,
-    driving_text,
-    severity_text,
+        pf_ratio_text,
+        compliance_text,
+        driving_text,
+        severity_text,
 
-    alerts_panel,
+        alerts_panel,
 
-    pressure_figure,
-    flow_figure,
-)
+        figure,
+    )
+
 
 if __name__ == "__main__":
     app.run(debug=True)
