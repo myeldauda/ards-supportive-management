@@ -10,17 +10,30 @@ class LungMechanics:
     compliance_ml_per_cmh2o: float
     airway_resistance_cmh2o_per_lps: float
     peep: float = 10.0
-    max_safe_tidal_volume_ml: float = 500.0
 
     def __post_init__(self):
+        """
+        Validate parameters.
+        """
+
         if self.compliance_ml_per_cmh2o <= 0:
-            raise ValueError("Compliance must be positive")
+            raise ValueError(
+                "Compliance must be positive."
+            )
 
         if self.airway_resistance_cmh2o_per_lps <= 0:
-            raise ValueError("Airway resistance must be positive")
+            raise ValueError(
+                "Airway resistance must be positive."
+            )
 
         if self.peep < 0:
-            raise ValueError("PEEP cannot be negative")
+            raise ValueError(
+                "PEEP cannot be negative."
+            )
+
+    # ==================================================
+    # AIRFLOW
+    # ==================================================
 
     def calculate_airflow(
         self,
@@ -28,17 +41,35 @@ class LungMechanics:
         alveolar_pressure: float
     ) -> float:
         """
-        Airflow based on pressure gradient and resistance.
+        Calculates airflow using Ohm's law of respiration.
+
+        Flow = ΔP / Resistance
         """
 
-        pressure_difference = ventilator_pressure - alveolar_pressure
+        pressure_gradient = (
+            ventilator_pressure
+            - alveolar_pressure
+        )
 
-        airflow = pressure_difference / self.airway_resistance_cmh2o_per_lps
+        airflow = (
+            pressure_gradient
+            / self.airway_resistance_cmh2o_per_lps
+        )
 
-        # safer physiologic ARDS airflow range
-        airflow = max(-0.8, min(airflow, 0.8))
+        # Physiological limits
+        airflow = max(
+            -2.0,
+            min(
+                airflow,
+                2.0
+            )
+        )
 
         return airflow
+
+    # ==================================================
+    # AIRWAY PRESSURE
+    # ==================================================
 
     def calculate_airway_pressure(
         self,
@@ -46,27 +77,41 @@ class LungMechanics:
         lung_volume_ml: float
     ) -> float:
         """
-        Respiratory equation of motion.
+        Calculates airway pressure.
+
+        Paw = PEEP + Resistive + Elastic
         """
 
         elastic_pressure = (
-            lung_volume_ml / self.compliance_ml_per_cmh2o
+            lung_volume_ml
+            / self.compliance_ml_per_cmh2o
         )
 
         resistive_pressure = (
-            airflow_lps * self.airway_resistance_cmh2o_per_lps
+            airflow_lps
+            * self.airway_resistance_cmh2o_per_lps
         )
 
         airway_pressure = (
-            resistive_pressure
+            self.peep
             + elastic_pressure
-            + self.peep
+            + resistive_pressure
         )
 
-        # physiologic safety cap
-        airway_pressure = max(5.0, min(airway_pressure, 30.0))
+        # Safety limits
+        airway_pressure = max(
+            0.0,
+            min(
+                airway_pressure,
+                60.0
+            )
+        )
 
         return airway_pressure
+
+    # ==================================================
+    # LUNG VOLUME
+    # ==================================================
 
     def update_lung_volume(
         self,
@@ -75,19 +120,51 @@ class LungMechanics:
         dt: float
     ) -> float:
         """
-        Updates lung volume safely.
+        Updates lung volume from airflow.
         """
 
-        airflow_ml_per_sec = airflow_lps * 1000
-
-        new_volume = current_volume_ml + (
-            airflow_ml_per_sec * dt
+        airflow_ml_per_sec = (
+            airflow_lps
+            * 1000
         )
 
-        if new_volume < 0:
-            new_volume = 0
+        new_volume = (
+            current_volume_ml
+            + airflow_ml_per_sec * dt
+        )
 
-        if new_volume > self.max_safe_tidal_volume_ml:
-            new_volume = self.max_safe_tidal_volume_ml
+        # Prevent negative volume
+        new_volume = max(
+            0.0,
+            new_volume
+        )
+
+        # Prevent overdistension
+        new_volume = min(
+            new_volume,
+            1000.0
+        )
 
         return new_volume
+
+    # ==================================================
+    # ALVEOLAR PRESSURE
+    # ==================================================
+
+    def calculate_alveolar_pressure(
+        self,
+        lung_volume_ml: float
+    ) -> float:
+        """
+        Calculates alveolar pressure from lung volume.
+        """
+
+        alveolar_pressure = (
+            self.peep
+            + (
+                lung_volume_ml
+                / self.compliance_ml_per_cmh2o
+            )
+        )
+
+        return alveolar_pressure

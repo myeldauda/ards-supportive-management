@@ -29,57 +29,113 @@ class SimulationEngine:
 
     def step(self, current_time: float, dt: float):
 
-        ventilator_pressure = self.ventilator.get_ventilator_pressure(
-            current_time
+        # ==========================================
+        # VENTILATOR PHASE
+        # ==========================================
+
+        ventilator_pressure = (
+            self.ventilator.get_ventilator_pressure(
+                current_time
+            )
         )
 
-        # better alveolar approximation
         alveolar_pressure = (
-            self.patient.lung_volume_ml /
-            self.patient.lung_compliance
+            self.patient.lung_volume_ml
+            / self.lung_mechanics.compliance_ml_per_cmh2o
         )
 
-        airflow = self.lung_mechanics.calculate_airflow(
-            ventilator_pressure=ventilator_pressure,
-            alveolar_pressure=alveolar_pressure
+        airflow = (
+            self.lung_mechanics.calculate_airflow(
+                ventilator_pressure=ventilator_pressure,
+                alveolar_pressure=alveolar_pressure
+            )
         )
 
-        new_lung_volume = self.lung_mechanics.update_lung_volume(
-            current_volume_ml=self.patient.lung_volume_ml,
-            airflow_lps=airflow,
-            dt=dt
+        # ==========================================
+        # INSPIRATION / EXPIRATION
+        # ==========================================
+
+        if self.ventilator.is_inspiration_phase(current_time):
+
+            new_lung_volume = (
+                self.lung_mechanics.update_lung_volume(
+                    current_volume_ml=self.patient.lung_volume_ml,
+                    airflow_lps=airflow,
+                    dt=dt
+                )
+            )
+
+        else:
+
+            # passive expiration
+            expiratory_flow = 0.35
+
+            new_lung_volume = max(
+                self.patient.lung_volume_ml
+                - expiratory_flow * 1000 * dt,
+                0.0
+            )
+
+            airflow = -expiratory_flow
+
+        # ==========================================
+        # AIRWAY PRESSURE
+        # ==========================================
+
+        airway_pressure = (
+            self.lung_mechanics.calculate_airway_pressure(
+                airflow_lps=airflow,
+                lung_volume_ml=new_lung_volume
+            )
         )
 
-        airway_pressure = self.lung_mechanics.calculate_airway_pressure(
-            airflow_lps=airflow,
-            lung_volume_ml=new_lung_volume
-        )
+        # ==========================================
+        # GAS EXCHANGE
+        # ==========================================
 
-        alveolar_oxygen = self.gas_exchange.calculate_alveolar_oxygen(
-            paco2=self.patient.paco2
+        alveolar_oxygen = (
+            self.gas_exchange.calculate_alveolar_oxygen(
+                paco2=self.patient.paco2
+            )
         )
 
         oxygen_efficiency = (
             self.ards_model.get_oxygen_transfer_efficiency()
         )
 
-        arterial_oxygen = self.gas_exchange.calculate_arterial_oxygen(
-            alveolar_oxygen=alveolar_oxygen,
-            oxygen_transfer_efficiency=oxygen_efficiency
+        arterial_oxygen = (
+            self.gas_exchange.calculate_arterial_oxygen(
+                alveolar_oxygen=alveolar_oxygen,
+                oxygen_transfer_efficiency=oxygen_efficiency
+            )
         )
 
-        spo2 = self.gas_exchange.calculate_spo2(
-            pao2=arterial_oxygen
+        spo2 = (
+            self.gas_exchange.calculate_spo2(
+                pao2=arterial_oxygen
+            )
         )
 
-        # corrected units
-        alveolar_ventilation = max(airflow * 60, 0)
+        # ==========================================
+        # CO2 DYNAMICS
+        # ==========================================
 
-        new_paco2 = self.gas_exchange.update_paco2(
-            current_paco2=self.patient.paco2,
-            alveolar_ventilation=alveolar_ventilation,
-            dt=dt
+        alveolar_ventilation = max(
+            airflow * 60,
+            0
         )
+
+        new_paco2 = (
+            self.gas_exchange.update_paco2(
+                current_paco2=self.patient.paco2,
+                alveolar_ventilation=alveolar_ventilation,
+                dt=dt
+            )
+        )
+
+        # ==========================================
+        # UPDATE PATIENT
+        # ==========================================
 
         self.patient.update_state(
             spo2=spo2,
@@ -92,10 +148,19 @@ class SimulationEngine:
 
         self.patient.record_state(current_time)
 
-    def run(self, duration_sec: float, dt: float = 0.2):
+    def run(
+        self,
+        duration_sec: float,
+        dt: float = 0.2
+    ):
 
         current_time = 0.0
 
         while current_time <= duration_sec:
-            self.step(current_time, dt)
+
+            self.step(
+                current_time=current_time,
+                dt=dt
+            )
+
             current_time += dt
