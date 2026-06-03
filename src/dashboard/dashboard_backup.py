@@ -373,46 +373,17 @@ def update_dashboard(n, profile, fio2, peep):
     ]
 
     # ==========================================
-    # OBJECTIVE 4A
-    # PRESSURE CONTROL WAVEFORM
+    # WAVEFORM
     # ==========================================
 
-    time = np.linspace(0, 12, 600)
+    baseline_pressure = patient_state["airway_pressure"]
 
-    cycle_duration = (
-        60 / ventilator.respiratory_rate
+    time = np.linspace(0, 6, 200)
+
+    waveform = (
+        baseline_pressure
+        + 2 * np.sin(2 * np.pi * time / 4)
     )
-
-    inspiration_time = (
-        ventilator.inspiration_time_sec
-    )
-
-    peep_level = ventilator.peep
-
-    pip_level = (
-        ventilator.peep
-        + ventilator.inspiratory_pressure
-    )
-
-    waveform = []
-
-    for t in time:
-
-        cycle_time = (
-            t % cycle_duration
-        )
-
-        if cycle_time <= inspiration_time:
-
-            waveform.append(
-                pip_level
-            )
-
-        else:
-
-            waveform.append(
-                peep_level
-            )
 
     figure = go.Figure()
 
@@ -421,21 +392,20 @@ def update_dashboard(n, profile, fio2, peep):
             x=time,
             y=waveform,
             mode="lines",
-            line=dict(width=3),
-            name="Airway Pressure",
+            name="Pressure",
         )
     )
 
     figure.update_layout(
         template="plotly_dark",
-        title="Pressure-Controlled Ventilator Waveform",
+        title="Real-Time Airway Pressure Waveform",
         xaxis_title="Time (s)",
         yaxis_title="Pressure (cmH₂O)",
-        height=450,
+        height=400,
         yaxis=dict(
             range=[
-                peep_level - 2,
-                pip_level + 5,
+                baseline_pressure - 4,
+                baseline_pressure + 4,
             ]
         ),
     )
