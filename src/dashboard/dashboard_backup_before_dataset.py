@@ -124,17 +124,7 @@ app.layout = html.Div(
                 "marginBottom": "30px",
             },
         ),
-html.Label("Classification Mode"),
 
-dcc.Dropdown(
-    id="mode-selector",
-    options=[
-        {"label": "Manual", "value": "manual"},
-        {"label": "Dynamic", "value": "dynamic"},
-    ],
-    value="manual",
-    clearable=False,
-),
         # ==========================================
         # CONTROL PANEL
         # ==========================================
@@ -269,18 +259,11 @@ dcc.Dropdown(
     [
         Input("interval-component", "n_intervals"),
         Input("profile-selector", "value"),
-        Input("mode-selector", "value"),
         Input("fio2-slider", "value"),
         Input("peep-slider", "value"),
     ],
 )
-def update_dashboard(
-    n,
-    profile,
-    mode,
-    fio2,
-    peep,
-):
+def update_dashboard(n, profile, fio2, peep):
 
     # Apply settings
 
@@ -299,27 +282,30 @@ def update_dashboard(
     )
 
     patient_state = patient.get_state()
-
     # ==========================================
     # DATASET-DRIVEN PATIENT STATE
     # ==========================================
 
     profile = profile.lower()
 
-    if profile == "mild":
+if profile == "mild":
 
-        current_dataset = mild_dataset
+    current_dataset = mild_dataset
 
-    elif profile == "moderate":
+elif profile == "moderate":
 
-        current_dataset = moderate_dataset
+    current_dataset = moderate_dataset
 
-    else:
+else:
 
-        current_dataset = severe_dataset
+    current_dataset = severe_dataset
 
     row = current_dataset.get_current_row()
-
+print(
+    f"Profile={profile}, "
+    f"Compliance={row['compliance']}, "
+    f"PaO2={row['pao2']}"
+)
     patient_state["pao2"] = row["pao2"]
 
     patient_state["paco2"] = row["paco2"]
@@ -327,12 +313,6 @@ def update_dashboard(
     patient_state["spo2"] = (
         row["spo2"] / 100
     )
-
-    lung_mechanics.compliance_ml_per_cmh2o = (
-        row["compliance"]
-    )
-
-    compliance = row["compliance"]
 
     lung_mechanics.compliance_ml_per_cmh2o = (
         row["compliance"]
@@ -347,47 +327,22 @@ def update_dashboard(
     # ==========================================
 
     pf_ratio = patient_state["pao2"] / fio2
-    # ==========================================
-    # DYNAMIC SEVERITY SCORING
-    # ==========================================
 
-    severity_score = (
-        0.4 * (100 - (patient_state["spo2"] * 100))
-        +
-        0.3 * patient_state["paco2"]
-        +
-        0.3 * max(
-            0,
-            60 - compliance
-        )
-    )
     compliance = row["compliance"]
 
     driving_pressure = (
         ventilator.inspiratory_pressure
     )
 
-    if severity_score < 25:
-
+    if pf_ratio > 300:
+        severity_text = "Normal"
+    elif pf_ratio > 200:
         severity_text = "Mild"
-
-    elif severity_score < 50:
-
+    elif pf_ratio > 100:
         severity_text = "Moderate"
-
     else:
-
         severity_text = "Severe"
-    if mode == "dynamic":
 
-        if severity_score < 25:
-            profile = "mild"
-
-        elif severity_score < 50:
-            profile = "moderate"
-
-        else:
-            profile = "severe"
     pf_ratio_text = f"{pf_ratio:.0f}"
     compliance_text = f"{compliance:.1f} mL/cmH₂O"
     driving_text = f"{driving_pressure:.1f} cmH₂O"
@@ -398,7 +353,7 @@ def update_dashboard(
 
     alerts = []
 
-    if severity_text == "Severe":
+    if pf_ratio < 100:
         alerts.append(
             html.Div(
                 "🚨 Severe ARDS",
@@ -410,7 +365,7 @@ def update_dashboard(
             )
         )
 
-    elif severity_text == "Moderate":
+    elif pf_ratio < 200:
         alerts.append(
             html.Div(
                 "⚠ Moderate ARDS",
@@ -463,16 +418,12 @@ def update_dashboard(
         *alerts,
     ]
 
-        # ==========================================
+    # ==========================================
     # OBJECTIVE 4A
-    # REALISTIC PRESSURE CONTROL WAVEFORM
+    # PRESSURE CONTROL WAVEFORM
     # ==========================================
 
-    time = np.linspace(
-        0,
-        12,
-        600
-    )
+    time = np.linspace(0, 12, 600)
 
     cycle_duration = (
         60 / ventilator.respiratory_rate
@@ -482,28 +433,19 @@ def update_dashboard(
         ventilator.inspiration_time_sec
     )
 
-    peep_level = (
-        ventilator.peep
-    )
+    peep_level = ventilator.peep
 
-    pip_level = (
-        ventilator.peep
-        + (
-            ventilator.tidal_volume_target_ml
-            / max(
-                lung_mechanics.compliance_ml_per_cmh2o,
-                1,
-            )
+  pip_level = (
+    ventilator.peep
+    + (
+        ventilator.tidal_volume_target_ml
+        / max(
+            lung_mechanics.compliance_ml_per_cmh2o,
+            1
         )
     )
-
+)
     waveform = []
-
-    tau = max(
-        lung_mechanics.compliance_ml_per_cmh2o
-        * 0.03,
-        0.15,
-    )
 
     for t in time:
 
@@ -513,80 +455,15 @@ def update_dashboard(
 
         if cycle_time <= inspiration_time:
 
-            rise_time = (
-                inspiration_time * 0.25
+            waveform.append(
+                pip_level
             )
-
-            # Smooth pressure rise
-            if cycle_time <= rise_time:
-
-                pressure = (
-                    peep_level
-                    +
-                    (
-                        pip_level
-                        - peep_level
-                    )
-                    *
-                    (
-                        1
-                        -
-                        np.exp(
-                            -4
-                            * cycle_time
-                            / max(
-                                rise_time,
-                                0.01
-                            )
-                        )
-                    )
-                )
-
-            # Plateau phase
-            else:
-
-                plateau_fraction = (
-                    cycle_time
-                    - rise_time
-                ) / max(
-                    inspiration_time
-                    - rise_time,
-                    0.01
-                )
-
-                pressure = (
-    pip_level
-    -
-    (
-        0.4
-        * plateau_fraction
-    )
-)
 
         else:
 
-            exp_time = (
-                cycle_time
-                - inspiration_time
-            )
-
-            pressure = (
+            waveform.append(
                 peep_level
-                +
-                (
-                    pip_level
-                    - peep_level
-                )
-                *
-                np.exp(
-                    -exp_time
-                    / tau
-                )
             )
-
-        waveform.append(
-            pressure
-        )
 
     figure = go.Figure()
 
@@ -595,16 +472,14 @@ def update_dashboard(
             x=time,
             y=waveform,
             mode="lines",
-            line=dict(
-                width=3
-            ),
+            line=dict(width=3),
             name="Airway Pressure",
         )
     )
 
     figure.update_layout(
         template="plotly_dark",
-        title="Realistic Pressure-Controlled Ventilator Waveform",
+        title="Pressure-Controlled Ventilator Waveform",
         xaxis_title="Time (s)",
         yaxis_title="Pressure (cmH₂O)",
         height=450,
@@ -615,6 +490,7 @@ def update_dashboard(
             ]
         ),
     )
+
     return (
         spo2,
         pao2,
