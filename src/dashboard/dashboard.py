@@ -305,6 +305,30 @@ def update_dashboard(
     # ==========================================
 
     profile = profile.lower()
+    # ==========================================
+    # DYNAMIC MODE
+    # ==========================================
+
+    if mode == "dynamic":
+
+        pf_ratio_estimate = (
+            patient_state["pao2"] / fio2
+        )
+
+        if pf_ratio_estimate > 200:
+
+            profile = "mild"
+
+        elif pf_ratio_estimate > 100:
+
+            profile = "moderate"
+
+        else:
+            profile = "severe"
+
+    # ==========================================
+    # DATASET SELECTION
+    # ==========================================
 
     if profile == "mild":
 
