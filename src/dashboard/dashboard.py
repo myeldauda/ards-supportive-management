@@ -69,6 +69,18 @@ severe_dataset = ARDSDataset(
     "data/severe_ards.csv"
 )
 
+# ==========================================
+# TREND STORAGE
+# ==========================================
+
+time_history = []
+
+spo2_history = []
+
+pao2_history = []
+
+compliance_history = []
+
 # ==================================================
 # DASH APP
 # ==================================================
@@ -666,29 +678,24 @@ def update_dashboard(
         ),
     )
 
-                 if "Mild" in severity_text:
+    if "Mild" in severity_text:
 
-        severity_display = (
-            "🟢 Mild ARDS"
-        )
+        severity_display = "🟢 Mild ARDS"
 
     elif "Moderate" in severity_text:
 
-        severity_display = (
-            "🟠 Moderate ARDS"
-        )
+        severity_display = "🟠 Moderate ARDS"
 
     else:
 
-        severity_display = (
-            "🔴 Severe ARDS"
-        )
+        severity_display = "🔴 Severe ARDS"
 
     status_text = (
         f"🟢 System Online | "
         f"Mode: {mode.title()} | "
         f"Severity: {severity_display}"
     )
+
     return (
         spo2,
         pao2,
