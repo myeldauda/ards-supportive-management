@@ -258,68 +258,41 @@ app.layout = html.Div(
         # CLINICAL ALERTS PANEL
         # ==========================================
 
-        html.Div(
-            id="alerts-panel",
-            style={
-                "backgroundColor": "#1e293b",
-                "padding": "20px",
-                "borderRadius": "16px",
-                "marginBottom": "20px",
-            },
-        ),
-# ==========================================
-# ICU DEVICE EVALUATION
-# ==========================================
-
-html.Div(
+   html.Div(
+    id="alerts-panel",
     style={
         "backgroundColor": "#1e293b",
         "padding": "20px",
         "borderRadius": "16px",
         "marginBottom": "20px",
     },
-    children=[
+),
 
-        html.H2("ICU Device Evaluation"),
+        # ==========================================
+        # ICU DEVICE EVALUATION
+        # ==========================================
 
         html.Div(
             style={
-                "display": "grid",
-                "gridTemplateColumns":
-                    "repeat(auto-fit, minmax(220px, 1fr))",
-                "gap": "20px",
+                "backgroundColor": "#1e293b",
+                ...
             },
             children=[
-
-                metric_card(
-                    "Pulse Oximeter Accuracy",
-                    "accuracy-card",
-                    "#22c55e",
-                ),
-
-                metric_card(
-                    "Oxygen Supply Reliability",
-                    "reliability-card",
-                    "#3b82f6",
-                ),
-
-                metric_card(
-                    "Alarm Response Time",
-                    "alarm-card",
-                    "#f59e0b",
-                ),
-
-                metric_card(
-                    "Monitor Stability Index",
-                    "stability-card",
-                    "#a855f7",
-                ),
+                ...
             ],
         ),
-    ],
-),
+
         dcc.Graph(
             id="pressure-waveform"
+        ),
+
+        # ==========================================
+        # OBJECTIVE 4B
+        # FLOW-TIME WAVEFORM
+        # ==========================================
+
+        dcc.Graph(
+            id="flow-waveform"
         ),
 
         dcc.Interval(
@@ -329,7 +302,6 @@ html.Div(
         ),
     ],
 )
-
 
 # ==================================================
 # LIVE CALLBACK
