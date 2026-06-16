@@ -118,23 +118,47 @@ app.layout = html.Div(
     children=[
 
         html.H1(
-            "ARDS Supportive Management Dashboard",
-            style={
-                "textAlign": "center",
-                "marginBottom": "30px",
-            },
-        ),
-html.Label("Classification Mode"),
+        "Biomedical Engineering ARDS Supportive Management Simulator",
+        style={
+            "textAlign": "center",
+            "marginBottom": "10px",
+        },
+    ),
 
-dcc.Dropdown(
-    id="mode-selector",
-    options=[
-        {"label": "Manual", "value": "manual"},
-        {"label": "Dynamic", "value": "dynamic"},
-    ],
-    value="manual",
-    clearable=False,
-),
+    html.H4(
+        "Real-Time Computational Respiratory Monitoring and Ventilator Simulation Platform",
+        style={
+            "textAlign": "center",
+            "color": "#94a3b8",
+            "marginBottom": "30px",
+        },
+    ),
+
+    html.Div(
+        id="system-status",
+        style={
+            "backgroundColor": "#1e293b",
+            "padding": "12px",
+            "borderRadius": "12px",
+            "marginBottom": "20px",
+            "textAlign": "center",
+            "fontWeight": "bold",
+            "fontSize": "18px",
+        },
+    ),
+
+    html.Label("Classification Mode"),
+
+    dcc.Dropdown(
+        id="mode-selector",
+        options=[
+            {"label": "Manual", "value": "manual"},
+            {"label": "Dynamic", "value": "dynamic"},
+        ],
+        value="manual",
+        clearable=False,
+    ),
+
         # ==========================================
         # CONTROL PANEL
         # ==========================================
@@ -260,11 +284,13 @@ dcc.Dropdown(
         Output("pf-card", "children"),
         Output("compliance-card", "children"),
         Output("driving-card", "children"),
-        Output("severity-card", "children"),
+    Output("severity-card", "children"),
 
-        Output("alerts-panel", "children"),
+    Output("system-status", "children"),
 
-        Output("pressure-waveform", "figure"),
+    Output("alerts-panel", "children"),
+
+    Output("pressure-waveform", "figure"),
     ],
     [
         Input("interval-component", "n_intervals"),
@@ -639,6 +665,13 @@ def update_dashboard(
             ]
         ),
     )
+
+    status_text = (
+        f"🟢 Deployment Status: Online | "
+        f"Classification Mode: {mode.title()} | "
+        f"ARDS Severity: {severity_text}"
+    )
+
     return (
         spo2,
         pao2,
@@ -650,15 +683,9 @@ def update_dashboard(
         driving_text,
         severity_text,
 
+        status_text,
+
         alerts_panel,
 
         figure,
-    )
-
-
-if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=8050,
-        debug=False,
     )
