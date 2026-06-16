@@ -114,7 +114,6 @@ def metric_card(title, card_id, color):
         ],
     )
 
-
 # ==================================================
 # LAYOUT
 # ==================================================
@@ -268,7 +267,57 @@ app.layout = html.Div(
                 "marginBottom": "20px",
             },
         ),
+# ==========================================
+# ICU DEVICE EVALUATION
+# ==========================================
 
+html.Div(
+    style={
+        "backgroundColor": "#1e293b",
+        "padding": "20px",
+        "borderRadius": "16px",
+        "marginBottom": "20px",
+    },
+    children=[
+
+        html.H2("ICU Device Evaluation"),
+
+        html.Div(
+            style={
+                "display": "grid",
+                "gridTemplateColumns":
+                    "repeat(auto-fit, minmax(220px, 1fr))",
+                "gap": "20px",
+            },
+            children=[
+
+                metric_card(
+                    "Pulse Oximeter Accuracy",
+                    "accuracy-card",
+                    "#22c55e",
+                ),
+
+                metric_card(
+                    "Oxygen Supply Reliability",
+                    "reliability-card",
+                    "#3b82f6",
+                ),
+
+                metric_card(
+                    "Alarm Response Time",
+                    "alarm-card",
+                    "#f59e0b",
+                ),
+
+                metric_card(
+                    "Monitor Stability Index",
+                    "stability-card",
+                    "#a855f7",
+                ),
+            ],
+        ),
+    ],
+),
         dcc.Graph(
             id="pressure-waveform"
         ),
@@ -453,79 +502,53 @@ def update_dashboard(
     pf_ratio_text = f"{pf_ratio:.0f}"
     compliance_text = f"{compliance:.1f} mL/cmH₂O"
     driving_text = f"{driving_pressure:.1f} cmH₂O"
-
-    # ==========================================
+     # ==========================================
     # CLINICAL ALERTS
     # ==========================================
 
     alerts = []
 
-    if severity_text == "Severe":
-        alerts.append(
-            html.Div(
-                "🚨 Severe ARDS",
-                style={
-                    "color": "#ef4444",
-                    "fontSize": "20px",
-                    "fontWeight": "bold",
-                },
-            )
-        )
+    if pf_ratio < 100:
+        severity_text = "Severe"
+        alerts.append("🔴 Severe ARDS")
 
-    elif severity_text == "Moderate":
-        alerts.append(
-            html.Div(
-                "⚠ Moderate ARDS",
-                style={
-                    "color": "#f59e0b",
-                    "fontSize": "20px",
-                    "fontWeight": "bold",
-                },
-            )
-        )
+    elif pf_ratio < 200:
+        severity_text = "Moderate"
+        alerts.append("🟠 Moderate ARDS")
 
-    if patient_state["paco2"] > 50:
-        alerts.append(
-            html.Div(
-                f"⚠ Hypercapnia (PaCO₂ = {patient_state['paco2']:.1f} mmHg)",
-                style={"color": "#f59e0b"},
-            )
-        )
+    else:
+        severity_text = "Mild"
+        alerts.append("🟢 Mild ARDS")
 
-    if patient_state["spo2"] < 0.90:
+    if patient_state["paco2"] > 45:
         alerts.append(
-            html.Div(
-                f"🚨 Hypoxemia (SpO₂ = {patient_state['spo2'] * 100:.1f}%)",
-                style={"color": "#ef4444"},
-            )
+            f"⚠ Hypercapnia (PaCO₂ = {patient_state['paco2']:.1f} mmHg)"
         )
 
     if driving_pressure > 15:
         alerts.append(
-            html.Div(
-                f"⚠ High Driving Pressure ({driving_pressure:.1f} cmH₂O)",
-                style={"color": "#f97316"},
-            )
+            f"⚠ High Driving Pressure ({driving_pressure:.1f} cmH₂O)"
         )
 
-    if len(alerts) == 0:
-        alerts.append(
-            html.Div(
-                "✓ No Critical Alerts",
-                style={
-                    "color": "#22c55e",
-                    "fontWeight": "bold",
-                },
-            )
-        )
+    alerts_panel = html.Div(
+        [
+            html.H3("Clinical Alerts"),
+            html.Hr(),
+            *[
+                html.Div(
+                    alert,
+                    style={
+                        "fontSize": "20px",
+                        "marginBottom": "6px",
+                    },
+                )
+                for alert in alerts
+            ]
+        ]
+    )
 
-    alerts_panel = [
-        html.H3("Clinical Alerts"),
-        html.Hr(),
-        *alerts,
-    ]
 
-        # ==========================================
+    # ==========================================
     # OBJECTIVE 4A
     # REALISTIC PRESSURE CONTROL WAVEFORM
     # ==========================================
