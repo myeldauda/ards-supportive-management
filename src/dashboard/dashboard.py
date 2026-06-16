@@ -321,7 +321,69 @@ app.layout = html.Div(
 dcc.Graph(
     id="pressure-waveform"
 ),
+        # ==========================================
+        # REMOTE ICU SESSION
+        # ==========================================
 
+        html.Div(
+            style={
+                "backgroundColor": "#1e293b",
+                "padding": "20px",
+                "borderRadius": "16px",
+                "marginBottom": "20px",
+            },
+            children=[
+
+                html.H2("Remote ICU Session"),
+
+                html.Div(
+                    style={
+                        "display": "grid",
+                        "gridTemplateColumns":
+                            "repeat(auto-fit, minmax(220px, 1fr))",
+                        "gap": "20px",
+                    },
+                    children=[
+
+                        metric_card(
+                            "Session ID",
+                            "session-card",
+                            "#22c55e",
+                        ),
+
+                        metric_card(
+                            "Connected Users",
+                            "users-card",
+                            "#3b82f6",
+                        ),
+
+                        metric_card(
+                            "Last Sync Time",
+                            "sync-card",
+                            "#f59e0b",
+                        ),
+
+                        metric_card(
+                            "Network Status",
+                            "network-card",
+                            "#a855f7",
+                        ),
+
+                        metric_card(
+                            "Monitoring Status",
+                            "monitor-card",
+                            "#06b6d4",
+                        ),
+
+                        metric_card(
+                            "Hospital Node",
+                            "hospital-card",
+                            "#e11d48",
+                        ),
+                    ],
+                ),
+            ],
+        ),
 # ==========================================
 # OBJECTIVE 4B
 # FLOW-TIME WAVEFORM
@@ -374,7 +436,12 @@ dcc.Interval(
         Output("reliability-card", "children"),
         Output("alarm-card", "children"),
         Output("stability-card", "children"),
-
+Output("session-card", "children"),
+Output("users-card", "children"),
+Output("sync-card", "children"),
+Output("network-card", "children"),
+Output("monitor-card", "children"),
+Output("hospital-card", "children"),
     Output("pressure-waveform", "figure"),
     Output("flow-waveform", "figure"),
     Output("volume-waveform", "figure"),
@@ -878,7 +945,17 @@ def update_dashboard(
     alarm_time = "1.2 s"
 
     stability = "96.8%"
+    session_id = "ICU-001"
 
+    connected_users = "3"
+
+    last_sync = f"{n}s"
+
+    network_status = "Online"
+
+    monitoring_status = "Active"
+
+    hospital_node = "Lagos-Node"
     return (
             spo2,
             pao2,
@@ -898,7 +975,12 @@ def update_dashboard(
         reliability,
         alarm_time,
         stability,
-
+session_id,
+connected_users,
+last_sync,
+network_status,
+monitoring_status,
+hospital_node,
     figure,
         flow_figure,
         volume_figure,
