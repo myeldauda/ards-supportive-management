@@ -155,7 +155,7 @@ app.layout = html.Div(
             {"label": "Manual", "value": "manual"},
             {"label": "Dynamic", "value": "dynamic"},
         ],
-        value="manual",
+       value="dynamic",
         clearable=False,
     ),
 
@@ -666,12 +666,29 @@ def update_dashboard(
         ),
     )
 
-    status_text = (
-        f"🟢 Deployment Status: Online | "
-        f"Classification Mode: {mode.title()} | "
-        f"ARDS Severity: {severity_text}"
-    )
+                 if "Mild" in severity_text:
 
+        severity_display = (
+            "🟢 Mild ARDS"
+        )
+
+    elif "Moderate" in severity_text:
+
+        severity_display = (
+            "🟠 Moderate ARDS"
+        )
+
+    else:
+
+        severity_display = (
+            "🔴 Severe ARDS"
+        )
+
+    status_text = (
+        f"🟢 System Online | "
+        f"Mode: {mode.title()} | "
+        f"Severity: {severity_display}"
+    )
     return (
         spo2,
         pao2,
