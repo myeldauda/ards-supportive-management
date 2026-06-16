@@ -258,27 +258,63 @@ app.layout = html.Div(
         # CLINICAL ALERTS PANEL
         # ==========================================
 
-   html.Div(
-    id="alerts-panel",
-    style={
-        "backgroundColor": "#1e293b",
-        "padding": "20px",
-        "borderRadius": "16px",
-        "marginBottom": "20px",
-    },
-),
+         html.Div(
+            id="alerts-panel",
+            style={
+                "backgroundColor": "#1e293b",
+                "padding": "20px",
+                "borderRadius": "16px",
+                "marginBottom": "20px",
+            },
+        ),
 
         # ==========================================
         # ICU DEVICE EVALUATION
         # ==========================================
 
-        html.Div(
+              html.Div(
             style={
                 "backgroundColor": "#1e293b",
-                ...
+                "padding": "20px",
+                "borderRadius": "16px",
+                "marginBottom": "20px",
             },
             children=[
-                ...
+
+                html.H2("ICU Device Evaluation"),
+
+                html.Div(
+                    style={
+                        "display": "grid",
+                        "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))",
+                        "gap": "20px",
+                    },
+                    children=[
+                        metric_card(
+                            "Pulse Oximeter Accuracy",
+                            "accuracy-card",
+                            "#22c55e",
+                        ),
+
+                        metric_card(
+                            "Oxygen Supply Reliability",
+                            "reliability-card",
+                            "#3b82f6",
+                        ),
+
+                        metric_card(
+                            "Alarm Response Time",
+                            "alarm-card",
+                            "#f59e0b",
+                        ),
+
+                        metric_card(
+                            "Monitor Stability Index",
+                            "stability-card",
+                            "#a855f7",
+                        ),
+                    ],
+                ),
             ],
         ),
 
@@ -317,16 +353,19 @@ app.layout = html.Div(
         Output("pf-card", "children"),
         Output("compliance-card", "children"),
         Output("driving-card", "children"),
-    Output("severity-card", "children"),
+        Output("severity-card", "children"),
 
-    Output("system-status", "children"),
+        Output("system-status", "children"),
 
-    Output("alerts-panel", "children"),
+        Output("alerts-panel", "children"),
+
         Output("accuracy-card", "children"),
         Output("reliability-card", "children"),
         Output("alarm-card", "children"),
         Output("stability-card", "children"),
-    Output("pressure-waveform", "figure"),
+
+        Output("pressure-waveform", "figure"),
+        Output("flow-waveform", "figure"),
     ],
     [
         Input("interval-component", "n_intervals"),
@@ -675,7 +714,66 @@ def update_dashboard(
             ]
         ),
     )
+    # ==========================================
+    # OBJECTIVE 4B
+    # FLOW-TIME WAVEFORM
+    # ==========================================
 
+    flow_waveform = []
+
+    peak_insp_flow = 0.8
+    peak_exp_flow = -1.0
+
+    for t in time:
+
+        cycle_time = t % cycle_duration
+
+        if cycle_time <= inspiration_time:
+
+            flow = (
+                peak_insp_flow
+                * np.exp(
+                    -2 * cycle_time
+                    / max(inspiration_time, 0.1)
+                )
+            )
+
+        else:
+
+            exp_time = (
+                cycle_time
+                - inspiration_time
+            )
+
+            flow = (
+                peak_exp_flow
+                * np.exp(
+                    -exp_time
+                    / tau
+                )
+            )
+
+        flow_waveform.append(flow)
+
+    flow_figure = go.Figure()
+
+    flow_figure.add_trace(
+        go.Scatter(
+            x=time,
+            y=flow_waveform,
+            mode="lines",
+            line=dict(width=3),
+            name="Airway Flow",
+        )
+    )
+
+    flow_figure.update_layout(
+        template="plotly_dark",
+        title="Flow-Time Waveform",
+        xaxis_title="Time (s)",
+        yaxis_title="Flow (L/s)",
+        height=450,
+    )
     if "Mild" in severity_text:
 
         severity_display = "🟢 Mild ARDS"
@@ -717,10 +815,11 @@ def update_dashboard(
 
             alerts_panel,
 
-            accuracy,
-            reliability,
-            alarm_time,
-            stability,
+                accuracy,
+        reliability,
+        alarm_time,
+        stability,
 
-            figure,
-        )
+        figure,
+        flow_figure,
+    )
