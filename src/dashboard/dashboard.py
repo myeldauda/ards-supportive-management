@@ -318,26 +318,37 @@ app.layout = html.Div(
             ],
         ),
 
-        dcc.Graph(
-            id="pressure-waveform"
-        ),
+dcc.Graph(
+    id="pressure-waveform"
+),
 
-        # ==========================================
-        # OBJECTIVE 4B
-        # FLOW-TIME WAVEFORM
-        # ==========================================
+# ==========================================
+# OBJECTIVE 4B
+# FLOW-TIME WAVEFORM
+# ==========================================
 
-        dcc.Graph(
-            id="flow-waveform"
-        ),
+dcc.Graph(
+    id="flow-waveform"
+),
 
-        dcc.Interval(
-            id="interval-component",
-            interval=1000,
-            n_intervals=0,
-        ),
+# ==========================================
+# OBJECTIVE 4C
+# VOLUME-TIME WAVEFORM
+# ==========================================
+
+dcc.Graph(
+    id="volume-waveform"
+),
+
+dcc.Interval(
+    id="interval-component",
+    interval=1000,
+    n_intervals=0,
+),
+
     ],
 )
+
 
 # ==================================================
 # LIVE CALLBACK
@@ -364,8 +375,9 @@ app.layout = html.Div(
         Output("alarm-card", "children"),
         Output("stability-card", "children"),
 
-        Output("pressure-waveform", "figure"),
-        Output("flow-waveform", "figure"),
+    Output("pressure-waveform", "figure"),
+    Output("flow-waveform", "figure"),
+    Output("volume-waveform", "figure"),
     ],
     [
         Input("interval-component", "n_intervals"),
@@ -774,6 +786,73 @@ def update_dashboard(
         yaxis_title="Flow (L/s)",
         height=450,
     )
+        # ==========================================
+    # OBJECTIVE 4C
+    # VOLUME-TIME WAVEFORM
+    # ==========================================
+
+    volume_waveform = []
+
+    tidal_volume_l = (
+        ventilator.tidal_volume_target_ml
+        / 1000
+    )
+
+    for t in time:
+
+        cycle_time = (
+            t % cycle_duration
+        )
+
+        if cycle_time <= inspiration_time:
+
+            volume = (
+                tidal_volume_l
+                * (
+                    cycle_time
+                    / inspiration_time
+                )
+            )
+
+        else:
+
+            exp_fraction = (
+                cycle_time
+                - inspiration_time
+            ) / max(
+                cycle_duration
+                - inspiration_time,
+                0.01,
+            )
+
+            volume = (
+                tidal_volume_l
+                * np.exp(
+                    -4 * exp_fraction
+                )
+            )
+
+        volume_waveform.append(volume)
+
+    volume_figure = go.Figure()
+
+    volume_figure.add_trace(
+        go.Scatter(
+            x=time,
+            y=volume_waveform,
+            mode="lines",
+            line=dict(width=3),
+            name="Volume",
+        )
+    )
+
+    volume_figure.update_layout(
+        template="plotly_dark",
+        title="Volume-Time Waveform",
+        xaxis_title="Time (s)",
+        yaxis_title="Volume (L)",
+        height=450,
+    )
     if "Mild" in severity_text:
 
         severity_display = "🟢 Mild ARDS"
@@ -820,6 +899,7 @@ def update_dashboard(
         alarm_time,
         stability,
 
-        figure,
+    figure,
         flow_figure,
+        volume_figure,
     )
