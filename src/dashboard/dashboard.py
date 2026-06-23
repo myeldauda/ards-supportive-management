@@ -91,7 +91,7 @@ app = Dash(__name__)
 def metric_card(title, card_id, color):
     return html.Div(
         style={
-            "backgroundColor": "#1e293b",
+            "backgroundColor": "#f8fafc",
             "padding": "20px",
             "borderRadius": "16px",
             "boxShadow": "0px 4px 12px rgba(0,0,0,0.3)",
@@ -129,7 +129,7 @@ app.layout = html.Div(
     children=[
 
         html.H1(
-        "Biomedical Engineering ARDS Supportive Management Simulator",
+        "ARDS Supportive Management Simulator",
         style={
             "textAlign": "center",
             "marginBottom": "10px",
@@ -204,29 +204,163 @@ app.layout = html.Div(
 
                 html.Br(),
 
-                html.Label("FiO₂"),
+html.Div(
+    [
+        html.Span("FiO₂"),
 
-                dcc.Slider(
-                    id="fio2-slider",
-                    min=0.21,
-                    max=1.00,
-                    step=0.01,
-                    value=0.60,
-                    tooltip={"placement": "bottom"},
-                ),
+        html.Span(
+            id="fio2-display",
+            children="0.60",
+            style={
+                "float": "right",
+                "backgroundColor": "#ffffff",
+                "color": "#16a34a",
+                "padding": "4px 12px",
+                "borderRadius": "8px",
+                "fontWeight": "bold",
+                "fontSize": "18px",
+                "minWidth": "70px",
+                "textAlign": "center",
+                "display": "inline-block",
+            },
+        ),
+    ]
+),
 
-                html.Br(),
+dcc.Slider(
+    id="fio2-slider",
+    min=0.21,
+    max=1.00,
+    step=0.01,
+    value=0.60,
+  marks={
+    0.21: {
+        "label": "0.21",
+        "style": {"color": "#f8fafc", "fontWeight": "bold"},
+    },
+    0.40: {
+        "label": "0.40",
+        "style": {"color": "#f8fafc", "fontWeight": "bold"},
+    },
+    0.60: {
+        "label": "0.60",
+        "style": {"color": "#f8fafc", "fontWeight": "bold"},
+    },
+    0.80: {
+        "label": "0.80",
+        "style": {"color": "#f8fafc", "fontWeight": "bold"},
+    },
+    1.00: {
+        "label": "1.00",
+        "style": {"color": "#f8fafc", "fontWeight": "bold"},
+    },
+}
+),
+html.Br(),
 
-                html.Label("PEEP (cmH₂O)"),
+html.Div(
+    [
+        html.Span("PEEP (cmH₂O)"),
 
-                dcc.Slider(
-                    id="peep-slider",
-                    min=5,
-                    max=20,
-                    step=1,
-                    value=10,
-                    tooltip={"placement": "bottom"},
-                ),
+        html.Span(
+            id="peep-display",
+            children="10",
+            style={
+                "backgroundColor": "#ffffff",
+                "color": "#3b82f6",
+                "padding": "4px 12px",
+                "borderRadius": "8px",
+                "fontWeight": "bold",
+                "fontSize": "18px",
+                "minWidth": "70px",
+                "textAlign": "center",
+            },
+        ),
+    ],
+    style={
+        "display": "flex",
+        "justifyContent": "space-between",
+        "alignItems": "center",
+    },
+),
+
+dcc.Slider(
+    id="peep-slider",
+    min=5,
+    max=20,
+    step=1,
+    value=10,
+),
+
+html.Br(),
+
+html.Div(
+    [
+        html.Span("Tidal Volume (mL)"),
+
+        html.Span(
+            id="tv-display",
+            children="420",
+            style={
+                "backgroundColor": "#ffffff",
+                "color": "#f59e0b",
+                "padding": "4px 12px",
+                "borderRadius": "8px",
+                "fontWeight": "bold",
+                "fontSize": "18px",
+                "minWidth": "70px",
+                "textAlign": "center",
+            },
+        ),
+    ],
+    style={
+        "display": "flex",
+        "justifyContent": "space-between",
+        "alignItems": "center",
+    },
+),
+
+dcc.Slider(
+    id="tv-slider",
+    min=250,
+    max=700,
+    step=10,
+    value=420,
+),
+
+html.Br(),
+
+html.Div(
+    [
+        html.Span("Plateau Pressure (cmH₂O)"),
+
+        html.Span(
+            id="plateau-display",
+            children="25",
+            style={
+                "float": "right",
+                "backgroundColor": "#ffffff",
+                "color": "#ef4444",
+                "padding": "4px 12px",
+                "borderRadius": "8px",
+                "fontWeight": "bold",
+                "fontSize": "18px",
+                "minWidth": "70px",
+                "textAlign": "center",
+                "display": "inline-block",
+            },
+        ),
+    ]
+),
+
+dcc.Slider(
+    id="plateau-slider",
+    min=10,
+    max=40,
+    step=1,
+    value=25,
+),
+
             ],
         ),
 
@@ -442,17 +576,26 @@ Output("sync-card", "children"),
 Output("network-card", "children"),
 Output("monitor-card", "children"),
 Output("hospital-card", "children"),
-    Output("pressure-waveform", "figure"),
+
+Output("fio2-display", "children"),
+Output("peep-display", "children"),
+Output("tv-display", "children"),
+Output("plateau-display", "children"),
+
+Output("pressure-waveform", "figure"),
     Output("flow-waveform", "figure"),
     Output("volume-waveform", "figure"),
     ],
-    [
-        Input("interval-component", "n_intervals"),
-        Input("profile-selector", "value"),
-        Input("mode-selector", "value"),
-        Input("fio2-slider", "value"),
-        Input("peep-slider", "value"),
-    ],
+   [
+    Input("interval-component", "n_intervals"),
+    Input("profile-selector", "value"),
+    Input("mode-selector", "value"),
+    Input("fio2-slider", "value"),
+    Input("peep-slider", "value"),
+
+    Input("tv-slider", "value"),
+    Input("plateau-slider", "value"),
+],
 )
 def update_dashboard(
     n,
@@ -460,6 +603,8 @@ def update_dashboard(
     mode,
     fio2,
     peep,
+    tidal_volume,
+    plateau_pressure,
 ):
 
     # Apply settings
@@ -470,6 +615,15 @@ def update_dashboard(
 
     lung_mechanics.peep = peep
     ventilator.peep = peep
+
+    ventilator.tidal_volume_target_ml = (
+        tidal_volume
+    )
+
+    # Remove this for now
+    # patient_state["plateau_pressure"] = (
+    #     plateau_pressure
+    # )
 
     # Run simulation
 
@@ -955,7 +1109,13 @@ def update_dashboard(
 
     monitoring_status = "Active"
 
-    hospital_node = "Lagos-Node"
+    hospital_node = "FTH Gombe"
+
+    fio2_display = f"{fio2:.2f}"
+    peep_display = f"{peep}"
+    tv_display = f"{tidal_volume}"
+    plateau_display = f"{plateau_pressure}"
+
     return (
             spo2,
             pao2,
@@ -981,7 +1141,13 @@ last_sync,
 network_status,
 monitoring_status,
 hospital_node,
-    figure,
-        flow_figure,
-        volume_figure,
-    )
+
+fio2_display,
+peep_display,
+tv_display,
+plateau_display,
+
+figure,
+flow_figure,
+volume_figure,
+)
