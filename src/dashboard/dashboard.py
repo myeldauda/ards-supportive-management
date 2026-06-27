@@ -86,7 +86,36 @@ compliance_history = []
 # ==================================================
 
 app = Dash(__name__)
+# ==================================================
+# CLINICAL ALERT MODEL
+# ==================================================
 
+class ClinicalAlert:
+
+    def __init__(
+        self,
+        severity,
+        title,
+        value,
+        explanation,
+        recommendation,
+        color,
+        icon,
+    ):
+
+        self.severity = severity
+
+        self.title = title
+
+        self.value = value
+
+        self.explanation = explanation
+
+        self.recommendation = recommendation
+
+        self.color = color
+
+        self.icon = icon
 
 def metric_card(title, card_id, color):
     return html.Div(
@@ -113,7 +142,51 @@ def metric_card(title, card_id, color):
             ),
         ],
     )
+# ==================================================
+# ALERT CARD RENDERER
+# ==================================================
 
+def render_alert(alert):
+
+    return html.Div(
+
+        style={
+            "backgroundColor": alert.color,
+            "padding": "15px",
+            "borderRadius": "12px",
+            "marginBottom": "10px",
+        },
+
+        children=[
+
+            html.H4(
+                f"{alert.icon} {alert.title}",
+                style={
+                    "marginBottom": "8px",
+                },
+            ),
+
+            html.Div(
+                alert.value,
+                style={
+                    "fontWeight": "bold",
+                    "fontSize": "18px",
+                    "marginBottom": "8px",
+                },
+            ),
+
+            html.P(
+                alert.explanation
+            ),
+
+            html.Div(
+                f"Recommendation: {alert.recommendation}",
+                style={
+                    "fontWeight": "bold",
+                },
+            ),
+        ],
+    )
 # ==================================================
 # LAYOUT
 # ==================================================
@@ -680,12 +753,25 @@ def update_dashboard(
 
     patient_state["pao2"] = row["pao2"]
 
-    patient_state["paco2"] = row["paco2"]
+    base_paco2 = row["paco2"]
+# Ventilation effect
 
+    tv_effect = (
+    (420 - tidal_volume) / 10
+)
+    patient_state["paco2"] = max(
+    25,
+    base_paco2 + tv_effect
+)
     patient_state["spo2"] = (
         row["spo2"] / 100
     )
-
+    print(
+    f"BASE={base_paco2} "
+    f"TV={tidal_volume} "
+    f"EFFECT={tv_effect} "
+    f"PACO2={patient_state['paco2']}"
+)
     lung_mechanics.compliance_ml_per_cmh2o = (
         row["compliance"]
     )
@@ -721,9 +807,7 @@ def update_dashboard(
     )
     compliance = row["compliance"]
 
-    driving_pressure = (
-        ventilator.inspiratory_pressure
-    )
+    driving_pressure = plateau_pressure - peep
 
     if severity_score < 25:
 
@@ -768,31 +852,67 @@ def update_dashboard(
         alerts.append("🟢 Mild ARDS")
 
     if patient_state["paco2"] > 45:
-        alerts.append(
-            f"⚠ Hypercapnia (PaCO₂ = {patient_state['paco2']:.1f} mmHg)"
-        )
 
+        alerts.append(
+
+            ClinicalAlert(
+
+                severity="warning",
+                title="Hypercapnia",
+                value=f"PaCO₂ = {patient_state['paco2']:.1f} mmHg",
+                explanation="Carbon dioxide retention detected.",
+                recommendation="Review respiratory rate and minute ventilation.",
+                color="#92400e",
+                icon="⚠",
+            )
+        )
+    print("CURRENT DRIVING PRESSURE =", driving_pressure)
     if driving_pressure > 15:
-        alerts.append(
-            f"⚠ High Driving Pressure ({driving_pressure:.1f} cmH₂O)"
-        )
 
-    alerts_panel = html.Div(
-        [
-            html.H3("Clinical Alerts"),
-            html.Hr(),
-            *[
-                html.Div(
-                    alert,
-                    style={
-                        "fontSize": "20px",
-                        "marginBottom": "6px",
-                    },
-                )
-                for alert in alerts
-            ]
-        ]
+     alerts.append(
+
+        ClinicalAlert(
+
+            severity="warning",
+
+            title="High Driving Pressure",
+
+            value=f"{driving_pressure:.1f} cmH₂O",
+
+            explanation=(
+                "Driving pressure exceeds the "
+                "recommended lung-protective threshold."
+            ),
+
+            recommendation=(
+                "Reduce tidal volume or improve "
+                "lung recruitment."
+            ),
+
+            color="#7c2d12",
+
+            icon="⚠",
+        )
     )
+    alerts_panel = html.Div(
+    [
+        html.H3("Clinical Alerts"),
+        html.Hr(),
+
+        *[
+            render_alert(alert)
+            if isinstance(alert, ClinicalAlert)
+            else html.Div(
+                alert,
+                style={
+                    "fontSize": "20px",
+                    "marginBottom": "6px",
+                },
+            )
+            for alert in alerts
+       ]
+    ]
+)
 
 
     # ==========================================
